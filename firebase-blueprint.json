@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and account information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "bio": { "type": "string" },
+        "profilePhoto": { "type": "string" },
+        "coverPhoto": { "type": "string" },
+        "birthday": { "type": "string" },
+        "gender": { "type": "string", "enum": ["male", "female", "LGBTQIA+", "rather not say"] },
+        "work": { "type": "string" },
+        "education": { "type": "string" },
+        "relationshipStatus": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "moderator", "admin", "owner"] },
+        "verificationStatus": { "type": "string", "enum": ["none", "blue", "gold"] },
+        "verificationExpiry": { "type": "string" },
+        "isLocked": { "type": "boolean" },
+        "isDeactivated": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "firstName", "lastName", "username", "role"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "User generated content",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorUsername": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "media": { "type": "array", "items": { "type": "object" } },
+        "type": { "type": "string", "enum": ["text", "image", "video", "file", "poll", "gif", "question"] },
+        "pollData": { "type": "object" },
+        "audience": { "type": "string", "enum": ["public", "friends", "private", "custom"] },
+        "isAnonymous": { "type": "boolean" },
+        "anonymousNickname": { "type": "string" },
+        "reactionCount": { "type": "number" },
+        "commentCount": { "type": "number" },
+        "shareCount": { "type": "number" },
+        "aiSummary": { "type": "string" },
+        "aiAnswer": { "type": "string" },
+        "factCheck": { "type": "object" },
+        "location": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["authorUid", "content", "type", "audience", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "parentCommentId": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorUsername": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["postId", "authorUid", "content", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Messaging session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["direct", "group"] },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["type", "participants", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Message in a chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "content": { "type": "string" },
+        "media": { "type": "object" },
+        "isOneTimeView": { "type": "boolean" },
+        "seenBy": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["chatId", "senderUid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/posts/{postId}": { "schema": "Post", "description": "Global posts" },
+    "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Post comments" },
+    "/chats/{chatId}": { "schema": "Chat", "description": "Chat sessions" },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "Message", "description": "Chat messages" }
+  }
+}

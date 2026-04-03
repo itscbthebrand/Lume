@@ -1,0 +1,164 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {uid}
+// Fields:
+//   - uid: string (required, immutable)
+//   - firstName: string (required)
+//   - lastName: string (required)
+//   - username: string (required, unique)
+//   - email: string (optional)
+//   - phone: string (optional)
+//   - bio: string (optional)
+//   - profilePhoto: string (optional)
+//   - coverPhoto: string (optional)
+//   - birthday: string (optional)
+//   - gender: string (optional)
+//   - work: string (optional)
+//   - education: string (optional)
+//   - relationshipStatus: string (optional)
+//   - role: string (required, ['user', 'moderator', 'admin', 'owner'])
+//   - verificationStatus: string (required, ['none', 'blue', 'gold'])
+//   - verificationExpiry: string (optional)
+//   - isLocked: bool (required)
+//   - isDeactivated: bool (required)
+//   - createdAt: timestamp (required, immutable)
+//   - updatedAt: timestamp (required)
+//
+// Collection: posts
+// Document ID: {postId}
+// Fields:
+//   - authorUid: string (required, immutable)
+//   - content: string (required)
+//   - type: string (required, ['text', 'image', 'video', 'file', 'poll', 'gif', 'question'])
+//   - audience: string (required, ['public', 'friends', 'private', 'custom'])
+//   - isAnonymous: bool (required)
+//   - createdAt: timestamp (required, immutable)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'owner'] ||
+          (request.auth.token.email == "chitronbhattacharjee@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isModerator() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['moderator', 'admin', 'owner'];
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.firstName is string && data.firstName.size() > 0 && data.firstName.size() < 50 &&
+             data.lastName is string && data.lastName.size() > 0 && data.lastName.size() < 50 &&
+             data.username is string && data.username.size() > 2 && data.username.size() < 30 &&
+             (data.email == null || isValidEmail(data.email)) &&
+             data.role in ['user', 'moderator', 'admin', 'owner'] &&
+             data.verificationStatus in ['none', 'blue', 'gold'];
+    }
+
+    function isValidPost(data) {
+      return data.content is string && data.content.size() < 10000 &&
+             data.type in ['text', 'image', 'video', 'file', 'poll', 'gif', 'question'] &&
+             data.audience in ['public', 'friends', 'private', 'custom'] &&
+             data.isAnonymous is bool;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated() || (request.query.limit == 1);
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) &&
+                      (request.resource.data.role == 'user' || (request.resource.data.username == 'adi' && request.resource.data.role == 'owner')) &&
+                      (request.resource.data.verificationStatus == 'none' || (request.resource.data.username == 'adi' && request.resource.data.verificationStatus == 'gold'));
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) &&
+                      (isOwner(userId) ? (request.resource.data.role == resource.data.role && request.resource.data.verificationStatus == resource.data.verificationStatus) : true);
+    }
+
+    // Mapping collections for login by username/phone
+    match /usernames/{username} {
+      allow get: if true;
+      allow create: if true; // Allowed during signup, unique constraint handled by docId
+      allow update, delete: if isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == username;
+    }
+
+    match /phones/{phone} {
+      allow get: if true;
+      allow create: if true;
+      allow update, delete: if isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == phone;
+    }
+
+    match /posts/{postId} {
+      allow read: if isAuthenticated(); // Simplified for now, should check audience in production
+      allow create: if isAuthenticated() && request.resource.data.authorUid == request.auth.uid && isValidPost(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.authorUid == request.auth.uid || isModerator()) && isValidPost(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.authorUid == request.auth.uid || isModerator());
+
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if isAuthenticated() && (resource.data.authorUid == request.auth.uid || isModerator());
+      }
+    }
+
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderUid;
+        allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.senderUid;
+      }
+    }
+
+    match /reports/{reportId} {
+      allow read: if isModerator();
+      allow create: if isAuthenticated();
+    }
+
+    match /verificationRequests/{requestId} {
+      allow read: if isModerator() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isModerator();
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Lume",
+  "description": "A lightweight yet powerful social media platform by LumeTech Co. LTD, featuring AI-driven feeds, real-time messaging, and intelligent ShiPu AI assistance.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}
