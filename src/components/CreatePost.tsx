@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { postApi } from '../lib/api';
+import { useState, useRef, useEffect } from 'react';
+import { postApi, authApi } from '../lib/api';
 import { useAuth } from '../App';
 import { Image, Video, FileText, BarChart2, Smile, MapPin, Globe, Users, Lock, Send, X, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,11 +10,15 @@ export default function CreatePost() {
   const [content, setContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [audience, setAudience] = useState<'public' | 'friends' | 'private'>('public');
+  const [audience, setAudience] = useState<'public' | 'friends' | 'private' | 'custom'>('public');
+  const [customAudience, setCustomAudience] = useState<string[]>([]);
+  const [showCustomSelector, setShowCustomSelector] = useState(false);
+  const [following, setFollowing] = useState<any[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [media, setMedia] = useState<File[]>([]);
   const [postType, setPostType] = useState<'text' | 'image' | 'video' | 'poll' | 'question'>('text');
   const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollDuration, setPollDuration] = useState('24h');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,6 +37,20 @@ export default function CreatePost() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  };
+
+  const fetchFollowing = async () => {
+    try {
+      const res = await authApi.getMe();
+      const user = res.data;
+      const followingList = await Promise.all(user.following.map(async (id: string) => {
+        const u = await authApi.getUserById(id);
+        return u.data;
+      }));
+      setFollowing(followingList);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleSubmit = async () => {
@@ -55,14 +73,19 @@ export default function CreatePost() {
         content,
         type: postType,
         audience,
+        customAudience: audience === 'custom' ? customAudience : undefined,
         isAnonymous,
         media: mediaData,
       };
 
       if (postType === 'poll') {
+        let durationHours = parseInt(pollDuration);
+        if (pollDuration.endsWith('d')) {
+          durationHours *= 24;
+        }
         postData.pollData = {
           options: pollOptions.filter(o => o.trim()).map(o => ({ text: o, votes: [] })),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+          expiresAt: new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString()
         };
       }
 
@@ -141,6 +164,24 @@ export default function CreatePost() {
                       + Add Option
                     </button>
                   )}
+                  
+                  <div className="pt-2 border-t border-gray-50">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Poll Duration</label>
+                    <div className="flex gap-2 mt-1 px-2">
+                      {['1h', '6h', '24h', '3d', '7d'].map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => setPollDuration(d)}
+                          className={cn(
+                            "px-3 py-1 rounded-lg text-[10px] font-bold transition-all",
+                            pollDuration === d ? "bg-[#6f9cde] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          )}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -149,11 +190,19 @@ export default function CreatePost() {
                 <div className="flex items-center gap-2">
                   <select
                     value={audience}
-                    onChange={(e) => setAudience(e.target.value as any)}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setAudience(val);
+                      if (val === 'custom') {
+                        setShowCustomSelector(true);
+                        fetchFollowing();
+                      }
+                    }}
                     className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full border-none focus:ring-0 cursor-pointer"
                   >
                     <option value="public">Public</option>
                     <option value="friends">Friends</option>
+                    <option value="custom">Custom</option>
                     <option value="private">Only Me</option>
                   </select>
                   <button
@@ -193,7 +242,67 @@ export default function CreatePost() {
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Custom Audience Selector */}
+              <AnimatePresence>
+                {showCustomSelector && audience === 'custom' && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+                  >
+                    <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-black text-gray-900 tracking-tight">Select Audience</h3>
+                        <button onClick={() => setShowCustomSelector(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                          <X className="w-5 h-5 text-gray-500" />
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        {following.length > 0 ? (
+                          following.map((f) => (
+                            <label key={f.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group">
+                              <div className="flex items-center gap-3">
+                                <img src={f.profilePhoto || `https://ui-avatars.com/api/?name=${f.firstName}+${f.lastName}&background=6f9cde&color=fff`} className="w-10 h-10 rounded-full object-cover" alt="" />
+                                <div>
+                                  <p className="font-bold text-gray-900 group-hover:text-[#6f9cde] transition-colors">{f.firstName} {f.lastName}</p>
+                                  <p className="text-xs text-gray-500">@{f.username}</p>
+                                </div>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={customAudience.includes(f.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setCustomAudience([...customAudience, f.id]);
+                                  } else {
+                                    setCustomAudience(customAudience.filter(id => id !== f.id));
+                                  }
+                                }}
+                                className="w-5 h-5 rounded-full text-[#6f9cde] focus:ring-[#6f9cde] border-gray-300"
+                              />
+                            </label>
+                          ))
+                        ) : (
+                          <div className="text-center py-10">
+                            <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                            <p className="text-gray-500 font-medium">You're not following anyone yet</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-6 flex justify-end">
+                        <button
+                          onClick={() => setShowCustomSelector(false)}
+                          className="px-8 py-3 bg-[#6f9cde] text-white font-black rounded-2xl shadow-lg shadow-[#6f9cde]/20 hover:bg-[#5a86c7] transition-all"
+                        >
+                          Done ({customAudience.length})
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
                 <div className="flex items-center gap-1">
                   <button onClick={() => fileInputRef.current?.click()} className={cn("p-2 rounded-xl transition-colors", postType === 'image' ? "bg-blue-50 text-blue-500" : "hover:bg-blue-50 text-blue-500")}>

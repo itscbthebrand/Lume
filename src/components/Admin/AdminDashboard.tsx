@@ -8,7 +8,7 @@ import { cn, formatDate } from '../../lib/utils';
 
 export default function AdminDashboard() {
   const { user, isOwner, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reports' | 'analytics' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reports' | 'analytics' | 'settings' | 'verifications'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +99,7 @@ export default function AdminDashboard() {
             { id: 'posts', label: 'Content Moderation', icon: FileText },
             { id: 'reports', label: 'Reported Items', icon: AlertTriangle },
             { id: 'analytics', label: 'System Analytics', icon: BarChart },
+            { id: 'verifications', label: 'Verification Requests', icon: BadgeCheck },
             ...(isOwner ? [{ id: 'settings', label: 'Master Settings', icon: Settings }] : []),
           ].map((tab) => (
             <button
@@ -244,6 +245,52 @@ export default function AdminDashboard() {
                     <div className={cn("h-1 w-12 rounded-full mt-4", stat.color)} />
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'verifications' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-6">Verification Requests</h3>
+              <div className="space-y-3">
+                {users.filter(u => u.pendingVerification).length > 0 ? (
+                  users.filter(u => u.pendingVerification).map((u) => (
+                    <div key={u.id} className="bg-gray-50 rounded-2xl p-4 flex items-center justify-between border border-gray-100">
+                      <div className="flex items-center gap-4">
+                        <img src={u.profilePhoto || `https://ui-avatars.com/api/?name=${u.firstName}+${u.lastName}&background=6f9cde&color=fff`} className="w-12 h-12 rounded-full object-cover" alt="" />
+                        <div>
+                          <p className="font-bold text-gray-900">{u.firstName} {u.lastName}</p>
+                          <p className="text-xs text-gray-500">@{u.username}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleVerify(u, 'blue')}
+                          className="px-4 py-2 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-all text-xs"
+                        >
+                          Approve Blue
+                        </button>
+                        <button 
+                          onClick={() => handleVerify(u, 'gold')}
+                          className="px-4 py-2 bg-yellow-50 text-yellow-600 font-bold rounded-xl hover:bg-yellow-100 transition-all text-xs"
+                        >
+                          Approve Gold
+                        </button>
+                        <button 
+                          onClick={() => handleVerify(u, 'none')}
+                          className="px-4 py-2 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all text-xs"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-20">
+                    <BadgeCheck className="w-16 h-16 text-gray-100 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">No pending verification requests.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { authApi, postApi } from '../lib/api';
 import { useAuth } from '../App';
 import { User, Post } from '../types';
 import PostCard from './PostCard';
-import { Camera, Edit3, MapPin, Calendar, Briefcase, GraduationCap, BadgeCheck, ShieldCheck, X, Save, Loader2 } from 'lucide-react';
+import MyFiles from './MyFiles';
+import { Camera, Edit3, MapPin, Calendar, Briefcase, GraduationCap, BadgeCheck, ShieldCheck, X, Save, Loader2, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatDate } from '../lib/utils';
 
@@ -15,6 +16,7 @@ export default function Profile() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'files'>('posts');
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
@@ -25,6 +27,7 @@ export default function Profile() {
     coverPhoto: ''
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
   const profileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,6 +38,7 @@ export default function Profile() {
       try {
         const res = await authApi.getUser(username);
         setUser(res.data);
+        setIsFollowing(res.data.followers?.includes(currentUser?.id || '') || false);
         if (currentUser?.id === res.data.id) {
           setEditForm({
             firstName: res.data.firstName,
@@ -54,6 +58,24 @@ export default function Profile() {
 
     fetchUser();
   }, [username, currentUser?.id]);
+
+  const handleFollow = async () => {
+    if (!user || !currentUser) return;
+    try {
+      await authApi.follow(user.id);
+      setIsFollowing(!isFollowing);
+      // Update local user state to reflect follower count change
+      setUser(prev => {
+        if (!prev) return null;
+        const followers = isFollowing 
+          ? prev.followers?.filter(id => id !== currentUser.id) || []
+          : [...(prev.followers || []), currentUser.id];
+        return { ...prev, followers };
+      });
+    } catch (err) {
+      console.error('Failed to follow/unfollow:', err);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -120,9 +142,10 @@ export default function Profile() {
                 if (!isEditing) setIsEditing(true);
                 setTimeout(() => coverInputRef.current?.click(), 100);
               }} 
-              className="absolute bottom-4 right-4 p-2 bg-black/50 text-white rounded-xl backdrop-blur-md hover:bg-black/70 transition-all opacity-0 group-hover/cover:opacity-100"
+              className="absolute bottom-4 right-4 p-2.5 bg-white/90 text-gray-900 rounded-xl shadow-lg backdrop-blur-md hover:bg-white transition-all z-10 flex items-center gap-2 text-sm font-bold"
             >
-              <Camera className="w-5 h-5" />
+              <Camera className="w-5 h-5 text-[#6f9cde]" />
+              <span>{isEditing ? 'Change Cover' : 'Edit Cover'}</span>
             </button>
           )}
         </div>
@@ -145,9 +168,10 @@ export default function Profile() {
                     if (!isEditing) setIsEditing(true);
                     setTimeout(() => profileInputRef.current?.click(), 100);
                   }}
-                  className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center text-white opacity-0 group-hover/profile:opacity-100 transition-opacity"
+                  className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover/profile:opacity-100 transition-opacity"
                 >
-                  <Camera className="w-8 h-8" />
+                  <Camera className="w-8 h-8 mb-1" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Change</span>
                 </button>
               )}
             </div>
@@ -174,8 +198,16 @@ export default function Profile() {
                 </button>
               ) : (
                 <>
-                  <button className="flex items-center gap-2 px-6 py-2.5 bg-[#6f9cde] text-white font-bold rounded-xl shadow-lg shadow-[#6f9cde]/20 hover:bg-[#5a86c7] transition-all">
-                    Follow
+                  <button 
+                    onClick={handleFollow}
+                    className={cn(
+                      "flex items-center gap-2 px-6 py-2.5 font-bold rounded-xl transition-all shadow-lg shadow-[#6f9cde]/20",
+                      isFollowing 
+                        ? "bg-gray-100 text-gray-900 hover:bg-gray-200" 
+                        : "bg-[#6f9cde] text-white hover:bg-[#5a86c7]"
+                    )}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
                   </button>
                   <button className="px-4 py-2.5 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all">
                     Message
@@ -276,10 +308,36 @@ export default function Profile() {
             </>
           )}
         </div>
+        
+        {/* Tabs */}
+        <div className="flex border-t border-gray-50 px-6">
+          <button 
+            onClick={() => setActiveTab('posts')}
+            className={cn(
+              "px-6 py-4 text-sm font-bold transition-all border-b-2",
+              activeTab === 'posts' ? "border-[#6f9cde] text-[#6f9cde]" : "border-transparent text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Posts
+          </button>
+          {currentUser?.id === user?.id && (
+            <button 
+              onClick={() => setActiveTab('files')}
+              className={cn(
+                "px-6 py-4 text-sm font-bold transition-all border-b-2 flex items-center gap-2",
+                activeTab === 'files' ? "border-[#6f9cde] text-[#6f9cde]" : "border-transparent text-gray-500 hover:text-gray-700"
+              )}
+            >
+              <FileText className="w-4 h-4" />
+              Files
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Profile Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {activeTab === 'posts' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {loading ? (
             <div className="space-y-6">
@@ -320,6 +378,9 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      ) : (
+        <MyFiles />
+      )}
 
       {/* Hidden Inputs */}
       <input type="file" ref={profileInputRef} onChange={(e) => handleFileChange(e, 'profilePhoto')} accept="image/*" className="hidden" />

@@ -1,13 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../App';
-import { Shield, Bell, Lock, User, Eye, Trash2, HelpCircle, Info, Save, Loader2, Camera } from 'lucide-react';
+import { Shield, Bell, Lock, User, Eye, Trash2, HelpCircle, Info, Save, Loader2, Camera, BadgeCheck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { authApi } from '../lib/api';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Settings() {
   const { user, setUser } = useAuth();
   const [activeSection, setActiveSection] = useState('account');
   const [isSaving, setIsSaving] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [loginActivity, setLoginActivity] = useState<any[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -22,6 +26,47 @@ export default function Settings() {
 
   const profileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchLoginActivity = async () => {
+    setIsLoadingActivity(true);
+    try {
+      const res = await authApi.getLoginActivity();
+      setLoginActivity(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingActivity(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'security') {
+      fetchLoginActivity();
+    }
+  }, [activeSection]);
+
+  const handleVerificationRequest = async () => {
+    setIsVerifying(true);
+    try {
+      await authApi.requestVerification();
+      setUser(prev => prev ? { ...prev, pendingVerification: true } : null);
+      alert('Verification request sent to admins!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send verification request.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handlePrivacyToggle = async (field: 'isPrivate' | 'twoFactorEnabled', value: boolean) => {
+    try {
+      const res = await authApi.updatePrivacy({ [field]: value });
+      setUser(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const sections = [
     { id: 'account', label: 'Account Settings', icon: User },
@@ -111,19 +156,21 @@ export default function Settings() {
               </div>
               <div className="space-y-4">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cover Photo</label>
-                <div className="relative h-32 bg-gray-100 rounded-2xl overflow-hidden group">
+                <div className="relative h-40 bg-gray-100 rounded-2xl overflow-hidden group border-2 border-dashed border-gray-200">
                   {formData.coverPhoto ? (
                     <img src={formData.coverPhoto} className="w-full h-full object-cover" alt="Cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      No cover photo
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                      <Camera className="w-8 h-8 mb-2" />
+                      <span className="text-sm font-bold">No cover photo</span>
                     </div>
                   )}
                   <button 
                     onClick={() => coverInputRef.current?.click()}
-                    className="absolute inset-0 bg-black/20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Camera className="w-6 h-6" />
+                    <Camera className="w-8 h-8 mb-1" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Change Cover</span>
                   </button>
                 </div>
               </div>
@@ -212,29 +259,102 @@ export default function Settings() {
         )}
 
         {activeSection === 'security' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Privacy Controls</h3>
+          <div className="space-y-8">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Privacy & Security</h3>
+            
             <div className="space-y-4">
-              {[
-                { label: 'Private Account', desc: 'Only approved followers can see your posts.', icon: Lock },
-                { label: 'Two-Factor Authentication', desc: 'Add an extra layer of security to your account.', icon: Shield },
-                { label: 'Login Activity', desc: 'See where you are currently logged in.', icon: Info },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-white rounded-xl shadow-sm">
-                      <item.icon className="w-5 h-5 text-[#6f9cde]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{item.label}</p>
-                      <p className="text-xs text-gray-500">{item.desc}</p>
-                    </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-white rounded-xl shadow-sm">
+                    <Lock className="w-5 h-5 text-[#6f9cde]" />
                   </div>
-                  <div className="w-12 h-6 bg-gray-200 rounded-full relative cursor-pointer">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Private Account</p>
+                    <p className="text-xs text-gray-500">Only approved followers can see your posts.</p>
                   </div>
                 </div>
-              ))}
+                <button 
+                  onClick={() => handlePrivacyToggle('isPrivate', !user?.isPrivate)}
+                  className={cn(
+                    "w-12 h-6 rounded-full relative transition-all duration-300",
+                    user?.isPrivate ? "bg-[#6f9cde]" : "bg-gray-200"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300",
+                    user?.isPrivate ? "left-7" : "left-1"
+                  )} />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-white rounded-xl shadow-sm">
+                    <Shield className="w-5 h-5 text-[#6f9cde]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Two-Factor Authentication</p>
+                    <p className="text-xs text-gray-500">Add an extra layer of security to your account.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handlePrivacyToggle('twoFactorEnabled', !user?.twoFactorEnabled)}
+                  className={cn(
+                    "w-12 h-6 rounded-full relative transition-all duration-300",
+                    user?.twoFactorEnabled ? "bg-[#6f9cde]" : "bg-gray-200"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300",
+                    user?.twoFactorEnabled ? "left-7" : "left-1"
+                  )} />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-white rounded-xl shadow-sm">
+                    <BadgeCheck className="w-5 h-5 text-[#6f9cde]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Request Verification</p>
+                    <p className="text-xs text-gray-500">Get a blue checkmark on your profile.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleVerificationRequest}
+                  disabled={isVerifying || user?.pendingVerification || user?.verificationStatus !== 'none'}
+                  className="px-4 py-1.5 bg-[#6f9cde] text-white text-xs font-bold rounded-lg shadow-md disabled:opacity-50"
+                >
+                  {user?.verificationStatus !== 'none' ? 'Verified' : user?.pendingVerification ? 'Pending' : 'Request'}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="w-4 h-4 text-gray-400" />
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Login Activity</h4>
+              </div>
+              <div className="space-y-2">
+                {loginActivity.map((session) => (
+                  <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-white rounded-xl shadow-sm">
+                        <Eye className="w-5 h-5 text-gray-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-gray-900">{session.device}</p>
+                          {session.isCurrent && <span className="text-[10px] font-black text-green-500 uppercase">Current</span>}
+                        </div>
+                        <p className="text-xs text-gray-500">{session.location} • {session.ip}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Last active: {formatDistanceToNow(new Date(session.lastActive))} ago</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

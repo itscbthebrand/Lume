@@ -20,18 +20,31 @@ export const authApi = {
   guestLogin: (name: string) => api.post('/auth/guest', { name }),
   getMe: () => api.get('/user/me'),
   getUser: (username: string) => api.get(`/user/${username}`),
+  getUserById: (userId: string) => api.get(`/user/id/${userId}`),
   getUserPosts: (userId: string) => api.get(`/posts/user/${userId}`),
+  getMyFiles: () => api.get('/user/files'),
+  searchUsers: (query: string) => api.get(`/user/search?query=${query}`),
   updateProfile: (data: any) => api.put('/user/profile', data),
+  follow: (userId: string) => api.post(`/user/${userId}/follow`),
+  requestVerification: () => api.post('/user/verification-request'),
+  updatePrivacy: (data: { isPrivate?: boolean; twoFactorEnabled?: boolean }) => api.put('/user/privacy', data),
+  getLoginActivity: () => api.get('/user/login-activity'),
+  toggle2FA: (enabled: boolean) => api.post('/user/2fa/toggle', { enabled }),
 };
 
 export const postApi = {
   getPosts: () => api.get('/posts'),
+  getSharedPosts: () => api.get('/posts/shared'),
   createPost: (data: any) => api.post('/posts', data),
   react: (postId: string, type: string) => api.post(`/posts/${postId}/react`, { type }),
+  getReactions: (postId: string) => api.get(`/posts/${postId}/reactions`),
   saveSummary: (postId: string, summary: string) => api.post(`/posts/${postId}/summary`, { summary }),
   update: (postId: string, data: any) => api.put(`/posts/${postId}`, data),
   delete: (postId: string) => api.delete(`/posts/${postId}`),
   comment: (postId: string, content: string) => api.post(`/posts/${postId}/comments`, { content }),
+  reactToComment: (postId: string, commentId: string, type: string) => api.post(`/posts/${postId}/comments/${commentId}/react`, { type }),
+  getCommentReactions: (postId: string, commentId: string) => api.get(`/posts/${postId}/comments/${commentId}/reactions`),
+  votePoll: (postId: string, optionId: string) => api.post(`/posts/${postId}/poll/vote`, { optionId }),
 };
 
 export const storyApi = {
@@ -45,6 +58,7 @@ export const storyApi = {
 export const chatApi = {
   getChats: () => api.get('/chats'),
   getChat: (chatId: string) => api.get(`/chats/${chatId}`),
+  startChat: (userId: string) => api.post('/chats/start', { userId }),
   getMessages: (chatId: string) => api.get(`/chats/${chatId}/messages`),
   sendMessage: (chatId: string, data: any) => api.post(`/chats/${chatId}/messages`, data),
 };

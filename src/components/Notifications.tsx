@@ -3,48 +3,7 @@ import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 
 export default function Notifications() {
-  const notifications = [
-    {
-      id: 1,
-      type: 'like',
-      user: { name: 'Adi', photo: 'https://picsum.photos/seed/adi/100' },
-      content: 'liked your post about ShiPu AI',
-      time: '2m ago',
-      unread: true
-    },
-    {
-      id: 2,
-      type: 'follow',
-      user: { name: 'Sarah', photo: 'https://picsum.photos/seed/sarah/100' },
-      content: 'started following you',
-      time: '15m ago',
-      unread: true
-    },
-    {
-      id: 3,
-      type: 'comment',
-      user: { name: 'John', photo: 'https://picsum.photos/seed/john/100' },
-      content: 'commented: "This is amazing! 🔥"',
-      time: '1h ago',
-      unread: false
-    },
-    {
-      id: 4,
-      type: 'mention',
-      user: { name: 'LumeTech', photo: 'https://picsum.photos/seed/lume/100' },
-      content: 'mentioned you in a post',
-      time: '3h ago',
-      unread: false
-    },
-    {
-      id: 5,
-      type: 'system',
-      user: { name: 'Lume', photo: null },
-      content: 'Your account has been verified with a Gold Badge! ✨',
-      time: '1d ago',
-      unread: false
-    }
-  ];
+  const notifications: any[] = [];
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -113,12 +72,12 @@ export default function Notifications() {
       </div>
 
       {notifications.length === 0 && (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Bell className="w-10 h-10 text-gray-300" />
+        <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
+          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Bell className="w-10 h-10 text-gray-200" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">No notifications yet</h3>
-          <p className="text-gray-500">When you get notifications, they'll show up here.</p>
+          <h3 className="text-lg font-black text-gray-900 tracking-tight mb-1">Nothing to show yet</h3>
+          <p className="text-sm text-gray-400 font-medium">When you get notifications, they'll show up here.</p>
         </div>
       )}
     </div>

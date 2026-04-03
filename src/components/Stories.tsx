@@ -6,15 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { ReactionType, Story } from '../types';
 
-const REACTION_EMOJIS: Record<ReactionType, string> = {
-  love: '❤️',
-  care: '🫂',
-  haha: '😂',
-  sad: '😢',
-  wow: '😮',
-  angry: '😡',
-  smile: '🙂'
-};
+import { ReactionIcon } from './ReactionIcons';
 
 export default function Stories() {
   const { user } = useAuth();
@@ -25,6 +17,8 @@ export default function Stories() {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const REACTION_TYPES: ReactionType[] = ['love', 'care', 'haha', 'sad', 'wow', 'angry', 'smile'];
 
   useEffect(() => {
     fetchStories();
@@ -276,9 +270,9 @@ export default function Stories() {
               </div>
 
               {/* Footer: Reactions & Reply or Viewers Button */}
-              <div className="p-4 bg-gradient-to-t from-black/80 to-transparent pt-10">
+              <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-12 z-20">
                 {isAuthor ? (
-                  <div className="flex justify-center">
+                  <div className="flex justify-center pb-4">
                     <button 
                       onClick={() => setShowViewers(true)}
                       className="flex items-center gap-2 px-6 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white font-bold hover:bg-white/30 transition-all"
@@ -288,15 +282,15 @@ export default function Stories() {
                     </button>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4">
-                      {(Object.entries(REACTION_EMOJIS) as [ReactionType, string][]).map(([type, emoji]) => (
+                  <div className="space-y-4 pb-4">
+                    <div className="flex items-center justify-center gap-3 overflow-x-auto no-scrollbar">
+                      {REACTION_TYPES.map((type) => (
                         <button
                           key={type}
                           onClick={() => handleReact(currentStory.id, type)}
-                          className="w-10 h-10 flex-shrink-0 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-xl hover:scale-125 transition-transform"
+                          className="w-10 h-10 flex-shrink-0 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:scale-125 transition-transform"
                         >
-                          {emoji}
+                          <ReactionIcon type={type} className="w-6 h-6" />
                         </button>
                       ))}
                     </div>
@@ -307,17 +301,17 @@ export default function Stories() {
                         placeholder="Reply to story..."
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
-                        className="flex-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 text-white placeholder-white/50 outline-none focus:ring-2 focus:ring-white/30 transition-all"
+                        className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-white placeholder-white/50 text-sm outline-none focus:ring-2 focus:ring-white/30 transition-all"
                       />
                       <button
                         type="submit"
                         disabled={!replyText.trim() || isSendingReply}
-                        className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center disabled:opacity-50"
+                        className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center disabled:opacity-50 flex-shrink-0"
                       >
                         <Send className="w-5 h-5" />
                       </button>
                     </form>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

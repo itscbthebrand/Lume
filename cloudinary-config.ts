@@ -1,0 +1,1 @@
+process.env.CLOUDINARY_URL = 'cloudinary://684835378833426:MAoOQXQhyW3yFvnQAEl4j03Ls-A@dowsi65rf';

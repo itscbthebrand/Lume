@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, MessageCircle, ShoppingBag, Settings, User, Bell, Menu, LogOut, Shield } from 'lucide-react';
+import { Home, Search, MessageCircle, ShoppingBag, Settings, User, Bell, Menu, LogOut, Shield, Share2, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../App';
 import { useState, useEffect } from 'react';
 import { adminApi } from '../lib/api';
@@ -30,15 +30,13 @@ export default function Layout() {
     { icon: Home, label: 'Home', path: '/' },
     { icon: Search, label: 'Explore', path: '/explore' },
     { icon: MessageCircle, label: 'Messages', path: '/messages' },
+    { icon: Share2, label: 'Shared with you', path: '/shared' },
+    ...(user?.role === 'admin' || user?.role === 'owner' || user?.username === 'adi' ? [{ icon: Shield, label: 'Admin Dashboard', path: '/admin' }] : []),
     { icon: ShoppingBag, label: 'Marketplace', path: '/marketplace' },
     { icon: User, label: 'Profile', path: `/profile/${user?.username}` },
     { icon: Bell, label: 'Notifications', path: '/notifications' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
-
-  if (isModerator) {
-    navItems.push({ icon: Shield, label: 'Admin', path: '/admin' });
-  }
 
   const handleLogout = () => {
     logout();
@@ -150,38 +148,16 @@ export default function Layout() {
 
       {/* Desktop Right Sidebar (Trending/Suggestions) */}
       <aside className="hidden lg:block w-80 p-8 sticky top-0 h-screen overflow-y-auto">
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
-          <h3 className="font-bold text-gray-900 mb-4">Trending for you</h3>
-          <div className="space-y-4">
-            {['#LumeTech', '#AIRevolution', '#ModernSocial', '#LumeLite'].map((tag) => (
-              <div key={tag} className="group cursor-pointer">
-                <p className="text-xs text-gray-500">Trending in Technology</p>
-                <p className="font-semibold text-gray-900 group-hover:text-[#6f9cde] transition-colors">{tag}</p>
-                <p className="text-xs text-gray-500">1.2K posts</p>
-              </div>
-            ))}
-          </div>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
+          <TrendingUp className="w-12 h-12 text-gray-100 mx-auto mb-3" />
+          <h3 className="font-bold text-gray-900 mb-1">Trending for you</h3>
+          <p className="text-xs text-gray-400 uppercase font-black tracking-widest">Nothing to show yet</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-900 mb-4">Suggested Users</h3>
-          <div className="space-y-4">
-            {[
-              { name: 'Adi', username: 'adi', photo: 'https://picsum.photos/seed/adi/100' },
-              { name: 'Lume Support', username: 'lume_help', photo: 'https://picsum.photos/seed/lume/100' }
-            ].map((suggested) => (
-              <div key={suggested.username} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={suggested.photo} alt={suggested.name} className="w-10 h-10 rounded-full" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{suggested.name}</p>
-                    <p className="text-xs text-gray-500">@{suggested.username}</p>
-                  </div>
-                </div>
-                <button className="text-xs font-bold text-[#6f9cde] hover:underline">Follow</button>
-              </div>
-            ))}
-          </div>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+          <Users className="w-12 h-12 text-gray-100 mx-auto mb-3" />
+          <h3 className="font-bold text-gray-900 mb-1">Suggested Users</h3>
+          <p className="text-xs text-gray-400 uppercase font-black tracking-widest">Nothing to show yet</p>
         </div>
       </aside>
     </div>

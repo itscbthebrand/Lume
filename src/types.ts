@@ -18,6 +18,24 @@ export interface User {
   verificationExpiry?: string;
   isLocked: boolean;
   isDeactivated: boolean;
+  isPrivate: boolean;
+  twoFactorEnabled: boolean;
+  loginActivity: {
+    id: string;
+    device: string;
+    location: string;
+    ip: string;
+    lastActive: string;
+    isCurrent: boolean;
+  }[];
+  pendingVerification: boolean;
+  following: string[];
+  followers: string[];
+  followRequests: string[];
+  verificationRequest?: {
+    status: 'pending' | 'approved' | 'rejected';
+    requestedAt: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -40,8 +58,10 @@ export interface Post {
   media?: { url: string; type: 'image' | 'video' | 'file' }[];
   type: 'text' | 'image' | 'video' | 'file' | 'poll' | 'gif' | 'question';
   pollData?: {
-    options: { text: string; votes: string[] }[];
-    expiresAt: any;
+    question: string;
+    options: { id: string; text: string; votes: string[] }[];
+    expiresAt: string;
+    totalVotes: number;
   };
   audience: 'public' | 'friends' | 'private' | 'custom';
   isAnonymous: boolean;
@@ -54,8 +74,11 @@ export interface Post {
     id: string;
     authorId: string;
     authorName: string;
+    authorUsername: string;
     authorPhoto?: string;
     content: string;
+    reactions: Reaction[];
+    reactionCount: number;
     createdAt: string;
   }[];
   aiSummary?: string;
@@ -100,6 +123,8 @@ export interface Comment {
   authorUsername: string;
   authorPhoto?: string;
   content: string;
+  reactions: Reaction[];
+  reactionCount: number;
   createdAt: string;
 }
 

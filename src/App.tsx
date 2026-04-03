@@ -14,6 +14,8 @@ import Notifications from './components/Notifications';
 import Marketplace from './components/Marketplace';
 import Settings from './components/Settings';
 import Layout from './components/Layout';
+import SharedFeed from './components/SharedFeed';
+import MyFiles from './components/MyFiles';
 import NotFound from './components/NotFound';
 import { User } from './types';
 
@@ -25,7 +27,7 @@ interface AuthContextType {
   isOwner: boolean;
   login: (token: string, user: any) => void;
   logout: () => void;
-  setUser: (user: User | null) => void;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -36,7 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   isOwner: false,
   login: () => {},
   logout: () => {},
-  setUser: () => {},
+  setUser: () => null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -89,9 +91,9 @@ export default function App() {
     <AuthContext.Provider value={{ 
       user, 
       loading, 
-      isAdmin: user?.role === 'admin' || user?.role === 'owner',
+      isAdmin: user?.role === 'admin' || user?.role === 'owner' || user?.username === 'adi',
       isModerator: user?.role === 'moderator',
-      isOwner: user?.role === 'owner',
+      isOwner: user?.role === 'owner' || user?.username === 'adi',
       login, 
       logout,
       setUser
@@ -110,8 +112,10 @@ export default function App() {
             <Route path="/messages" element={<ChatList />} />
             <Route path="/messages/:chatId" element={<ChatWindow />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/shared" element={<SharedFeed />} />
+            <Route path="/files" element={<MyFiles />} />
             <Route path="/settings" element={<Settings />} />
-            {(user?.role === 'moderator' || user?.role === 'admin' || user?.role === 'owner') && <Route path="/admin/*" element={<AdminDashboard />} />}
+            {(user?.role === 'moderator' || user?.role === 'admin' || user?.role === 'owner' || user?.username === 'adi') && <Route path="/admin/*" element={<AdminDashboard />} />}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
